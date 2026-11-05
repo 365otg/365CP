@@ -1,0 +1,1168 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>P80 Numbers Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      * { box-sizing: border-box; }
+      :root{
+        --bg:#d8dde0; --panel:#edf0f2; --panel2:#e2e7ea; --bezel:#aeb8bf; --edge:#c3ccd1;
+        --ink:#1b232a; --muted:#5a6771; --faint:#84919b;
+        --inset:#fbfcfd; --digits:#14313f; --grid:#ccd4d9;
+        --green:#0f8a43; --green-lamp:#22c55e; --amber:#a86e00; --amber-lamp:#f5a623;
+        --red:#c62a1e; --red-lamp:#ef3b2c; --cyan:#0b7285; --off:#9aa6ad;
+        --hatch:rgba(27,35,42,.28);
+        --shadow:0 1px 2px rgba(20,30,38,.18), inset 0 1px 0 rgba(255,255,255,.55);
+      }
+      @media (prefers-color-scheme: dark){
+        :root{
+          --bg:#0a0d10; --panel:#141a1f; --panel2:#10151a; --bezel:#2b343e; --edge:#222a32;
+          --ink:#d9e1e8; --muted:#8d99a5; --faint:#5f6d78;
+          --inset:#05080a; --digits:#46ff8a; --grid:#232d36;
+          --green:#2fe673; --green-lamp:#2fe673; --amber:#ffb224; --amber-lamp:#ffb224;
+          --red:#ff5147; --red-lamp:#ff5147; --cyan:#4fd8e8; --off:#4a565f;
+          --hatch:rgba(217,225,232,.30);
+          --shadow:0 1px 2px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.05);
+        }
+      }
+      html{ -webkit-text-size-adjust:100%; }
+      body{
+        margin:0; background:var(--bg); color:var(--ink);
+        font-family: ui-sans-system, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        font-size:15px; line-height:1.45;
+        background-image: radial-gradient(rgba(0,0,0,.05) 1px, transparent 1px);
+        background-size: 22px 22px;
+      }
+      @media (prefers-color-scheme: dark){
+        body{ background-image: radial-gradient(rgba(255,255,255,.035) 1px, transparent 1px); }
+      }
+      .mono{ font-family:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+      .cond{ font-family:"Barlow Condensed", "Arial Narrow", sans-serif; }
+      main{ max-width:1240px; margin:0 auto; padding:14px 14px 30px; }
+
+      /* ---------- panels ---------- */
+      .panel{
+        background:var(--panel); border:1px solid var(--bezel); border-radius:6px;
+        box-shadow:var(--shadow); padding:14px 16px 16px; position:relative;
+      }
+      .panel + .panel{ margin-top:14px; }
+      .panel::before, .panel::after{
+        content:""; position:absolute; width:7px; height:7px; border-radius:50%;
+        background:var(--bezel); box-shadow: inset 0 1px 1px rgba(0,0,0,.45); top:7px;
+      }
+      .panel::before{ left:7px; } .panel::after{ right:7px; }
+      .p-head{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+      .p-tag{
+        font-family:"IBM Plex Mono", monospace; font-size:10px; font-weight:600; letter-spacing:.08em;
+        border:1px solid var(--bezel); border-radius:3px; padding:2px 6px; color:var(--muted);
+        background:var(--panel2); white-space:nowrap;
+      }
+      .p-title{
+        font-family:"Barlow Condensed", sans-serif; font-size:21px; font-weight:700;
+        letter-spacing:.06em; text-transform:uppercase; margin:0; line-height:1;
+      }
+      .p-right{ margin-left:auto; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+      .p-note{ color:var(--muted); font-size:12.5px; margin:10px 0 0; }
+      .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px; }
+      .grid2 .panel + .panel{ margin-top:0; }
+      .grid-main{ display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1fr); gap:14px; margin-top:14px; align-items:start; }
+      .grid-main .panel + .panel{ margin-top:0; }
+      @media (max-width:900px){ .grid2, .grid-main{ grid-template-columns:1fr; } }
+
+      /* ---------- lamps ---------- */
+      .lamp{ width:11px; height:11px; border-radius:50%; flex:none; box-shadow: inset 0 -1px 2px rgba(0,0,0,.4), 0 0 0 2px rgba(0,0,0,.12); }
+      .lamp.g{ background:var(--green-lamp); } .lamp.a{ background:var(--amber-lamp); }
+      .lamp.r{ background:var(--red-lamp); } .lamp.off{ background:var(--off); box-shadow: inset 0 1px 2px rgba(0,0,0,.35); }
+      .lamp.pulse{ animation:pulse 1.6s ease-in-out infinite; }
+      @keyframes pulse{ 0%,100%{ opacity:1; } 50%{ opacity:.35; } }
+      @media (prefers-reduced-motion: reduce){ .lamp.pulse{ animation:none; } }
+
+      /* ---------- status strip ---------- */
+      .statusbar{
+        display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+        background:var(--panel); border:1px solid var(--bezel); border-radius:6px;
+        box-shadow:var(--shadow); padding:10px 16px;
+      }
+      .sb-item{ display:flex; align-items:center; gap:8px; }
+      .sb-label{ font-family:"IBM Plex Mono", monospace; font-size:10px; letter-spacing:.1em; color:var(--muted); text-transform:uppercase; }
+      .sb-value{ font-family:"Barlow Condensed", sans-serif; font-size:19px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; line-height:1; }
+      .sb-value.ok{ color:var(--green); }
+      .sb-sep{ width:1px; align-self:stretch; background:var(--edge); }
+      .sb-clock{ font-family:"IBM Plex Mono", monospace; font-size:15px; font-weight:600; }
+      .alarm-chip{
+        font-family:"IBM Plex Mono", monospace; font-size:11px; font-weight:700; letter-spacing:.05em;
+        border:1px solid var(--red); color:var(--red); border-radius:3px; padding:4px 8px;
+        display:inline-flex; align-items:center; gap:7px; background:transparent;
+      }
+      .alarm-chip.clear{ border-color:var(--green); color:var(--green); }
+      @media (max-width:640px){ .sb-sep{ display:none; } .statusbar{ gap:10px 14px; } }
+
+      /* ---------- readouts ---------- */
+      .seg{ display:inline-flex; border:1px solid var(--bezel); border-radius:4px; overflow:hidden; }
+      .seg button{
+        appearance:none; border:0; background:var(--panel2); color:var(--muted); cursor:pointer;
+        font-family:"IBM Plex Mono", monospace; font-size:12px; font-weight:600; letter-spacing:.05em;
+        padding:9px 13px; min-height:40px;
+      }
+      .seg button + button{ border-left:1px solid var(--bezel); }
+      .seg button[aria-pressed="true"]{ background:var(--ink); color:var(--bg); }
+      .seg button:focus-visible, .ack-btn:focus-visible, .dl-btn:focus-visible, .bar-btn:focus-visible{ outline:2px solid var(--cyan); outline-offset:2px; }
+      .readouts{ display:grid; grid-template-columns:repeat(6,1fr); gap:10px; }
+      @media (max-width:1000px){ .readouts{ grid-template-columns:repeat(3,1fr); } }
+      @media (max-width:560px){ .readouts{ grid-template-columns:repeat(2,1fr); } }
+      .meter{
+        background:var(--inset); border:1px solid var(--bezel); border-radius:4px;
+        padding:10px 11px 9px; box-shadow: inset 0 2px 6px rgba(0,0,0,.14);
+      }
+      .meter .m-label{ font-family:"IBM Plex Mono", monospace; font-size:10px; font-weight:600; letter-spacing:.1em; color:var(--muted); text-transform:uppercase; display:flex; justify-content:space-between; align-items:center; gap:6px; }
+      .meter .m-value{
+        font-family:"IBM Plex Mono", monospace; font-weight:700; color:var(--digits);
+        font-size:clamp(19px, 2.4vw, 27px); letter-spacing:.01em; line-height:1.25; white-space:nowrap;
+        text-shadow: 0 0 9px rgba(70,255,138,.25);
+      }
+      @media (prefers-color-scheme: light){ .meter .m-value{ text-shadow:none; } }
+      .meter .m-delta{ font-family:"IBM Plex Mono", monospace; font-size:11px; font-weight:600; white-space:nowrap; }
+      .up{ color:var(--green); } .down{ color:var(--red); } .flat{ color:var(--muted); }
+      .down.good{ color:var(--green); }
+
+      /* ---------- charts ---------- */
+      .cursor-line{
+        font-family:"IBM Plex Mono", monospace; font-size:12px; font-weight:500;
+        background:var(--inset); border:1px solid var(--edge); border-radius:4px;
+        padding:8px 10px; margin-top:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      }
+      .cursor-line b{ color:var(--cyan); font-weight:700; }
+      .chart-wrap{ width:100%; }
+      .chart-wrap svg{ display:block; width:100%; }
+      .axis-txt{ font-family:"IBM Plex Mono", monospace; fill:var(--muted); }
+      .grid-ln{ stroke:var(--grid); stroke-width:1; }
+      .annot-txt{ font-family:"IBM Plex Mono", monospace; font-weight:700; fill:var(--amber); }
+
+      /* monthly bars */
+      .bars-area{ position:relative; height:216px; margin-top:6px; }
+      .bars-grid{ position:absolute; inset:0; }
+      .bars-grid .gl{ position:absolute; left:44px; right:0; border-top:1px dashed var(--grid); }
+      .bars-grid .gl span{
+        position:absolute; left:-44px; top:-8px; width:38px; text-align:right;
+        font-family:"IBM Plex Mono", monospace; font-size:10px; color:var(--muted);
+      }
+      .bars-row{ position:absolute; inset:0 0 0 44px; display:flex; align-items:flex-end; gap:4px; }
+      .bar-btn{
+        flex:1 1 0; min-width:0; height:100%; display:flex; align-items:flex-end;
+        background:none; border:0; padding:0; cursor:pointer;
+      }
+      .bar-fill{ width:100%; background:var(--cyan); opacity:.82; border-radius:2px 2px 0 0; min-height:2px; }
+      .bar-btn.sel .bar-fill{ background:var(--green); opacity:1; }
+      .bar-fill.partial{
+        background: repeating-linear-gradient(45deg, var(--cyan) 0 5px, transparent 5px, transparent 10px);
+        border:1px solid var(--cyan); border-bottom:0; opacity:.9;
+      }
+      .bars-labels{ display:flex; gap:4px; margin:6px 0 0 44px; }
+      .bars-labels span{ flex:1 1 0; text-align:center; font-family:"IBM Plex Mono", monospace; font-size:10px; color:var(--muted); min-width:0; }
+      @media (max-width:560px){ .bars-labels span{ font-size:9px; } .bars-area{ height:180px; } }
+
+      /* ---------- cadence ---------- */
+      .rate-row{ margin-bottom:13px; }
+      .rate-head{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+      .rate-name{ font-family:"IBM Plex Mono", monospace; font-size:11px; font-weight:600; letter-spacing:.08em; color:var(--muted); }
+      .rate-val{ font-family:"IBM Plex Mono", monospace; font-size:14px; font-weight:700; }
+      .rate-track{ height:12px; background:var(--inset); border:1px solid var(--bezel); border-radius:3px; position:relative; margin-top:5px; box-shadow: inset 0 1px 4px rgba(0,0,0,.18); }
+      .rate-fill{ position:absolute; top:0; bottom:0; left:0; background:var(--cyan); border-radius:2px 0 0 2px; }
+      .rate-fill.hit{ background:var(--green); }
+      .setpoint{ position:absolute; top:-4px; bottom:-4px; width:2px; background:var(--amber-lamp); }
+      .setpoint::after{
+        content:"SETPOINT 48"; position:absolute; top:16px; left:0; transform:translateX(-88%); white-space:nowrap;
+        font-family:"IBM Plex Mono", monospace; font-size:9px; font-weight:700; color:var(--amber); letter-spacing:.05em;
+      }
+      .rate-row{ margin-bottom:27px; }
+      .rate-row:last-child{ margin-bottom:20px; }
+      .cycle{ display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-top:8px; }
+      .cyc{
+        text-align:center; border:1px solid var(--bezel); border-radius:4px;
+        background:var(--panel2); padding:8px 4px 7px; min-width:0;
+      }
+      .cyc .c-name{ font-family:"Barlow Condensed", sans-serif; font-weight:700; font-size:16px; letter-spacing:.05em; text-transform:uppercase; line-height:1.05; }
+      .cyc .c-per{ font-family:"IBM Plex Mono", monospace; font-size:10px; color:var(--muted); margin-top:3px; }
+      .cyc-arrow{ display:none; }
+
+      /* ---------- mix bar ---------- */
+      .mix-bar{ display:flex; height:26px; border:1px solid var(--bezel); border-radius:4px; overflow:hidden; }
+      .mix-bar div{ height:100%; }
+      .mix-legend{ list-style:none; margin:12px 0 0; padding:0; display:grid; grid-template-columns:1fr 1fr; gap:6px 16px; }
+      .mix-legend li{ display:flex; align-items:center; gap:8px; font-size:13px; }
+      .mix-legend .sw{ width:10px; height:10px; border-radius:2px; flex:none; }
+      .mix-legend .mv{ margin-left:auto; font-family:"IBM Plex Mono", monospace; font-size:12px; font-weight:600; }
+      @media (max-width:480px){ .mix-legend{ grid-template-columns:1fr; } }
+
+      /* ---------- lines table ---------- */
+      .lines{ width:100%; border-collapse:collapse; }
+      .lines th{
+        font-family:"IBM Plex Mono", monospace; font-size:10px; letter-spacing:.1em; color:var(--muted);
+        text-transform:uppercase; text-align:left; padding:6px 10px; border-bottom:2px solid var(--bezel);
+      }
+      .lines td{ padding:11px 10px; border-bottom:1px solid var(--edge); vertical-align:top; }
+      .lines tr:last-child td{ border-bottom:0; }
+      .line-no{ font-family:"IBM Plex Mono", monospace; font-size:11px; font-weight:700; color:var(--muted); white-space:nowrap; }
+      .line-name{ font-family:"Barlow Condensed", sans-serif; font-size:19px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; line-height:1.1; }
+      .line-sub{ color:var(--muted); font-size:12.5px; margin-top:2px; }
+      .line-read{ font-family:"IBM Plex Mono", monospace; font-size:14px; font-weight:700; white-space:nowrap; }
+      .line-read.none{ color:var(--faint); font-weight:500; }
+      .status-cell{ display:flex; align-items:center; gap:8px; font-family:"IBM Plex Mono", monospace; font-size:11px; font-weight:700; letter-spacing:.06em; white-space:nowrap; }
+      @media (max-width:760px){
+        .lines thead{ display:none; }
+        .lines, .lines tbody, .lines tr, .lines td{ display:block; width:100%; }
+        .lines tr{ border:1px solid var(--edge); border-radius:5px; padding:10px 12px; margin-bottom:10px; background:var(--panel2); }
+        .lines td{ border:0; padding:3px 0; }
+        .lines td::before{
+          content:attr(data-l); display:block; font-family:"IBM Plex Mono", monospace;
+          font-size:9px; letter-spacing:.1em; color:var(--faint); text-transform:uppercase; margin-bottom:1px;
+        }
+      }
+      .goal-strip{
+        display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+        border:1px dashed var(--bezel); border-radius:5px; padding:11px 13px; margin-bottom:14px; background:var(--panel2);
+      }
+      .goal-big{ font-family:"IBM Plex Mono", monospace; font-size:20px; font-weight:700; }
+      .goal-txt{ color:var(--muted); font-size:13px; }
+
+      /* ---------- follower bank ---------- */
+      .bank-total{ font-family:"IBM Plex Mono", monospace; font-size:26px; font-weight:700; line-height:1.1; }
+      .bank-bar{ display:flex; height:30px; border:1px solid var(--bezel); border-radius:4px; overflow:hidden; background:var(--inset); margin-top:10px; }
+      .bank-bar div{ height:100%; }
+      .bank-est{
+        background: repeating-linear-gradient(45deg, var(--hatch) 0 5px, transparent 5px, transparent 10px);
+        border-left:1px dashed var(--bezel);
+      }
+      .bank-legend{ list-style:none; margin:12px 0 0; padding:0; }
+      .bank-legend li{ display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid var(--edge); font-size:13.5px; }
+      .bank-legend li:last-child{ border-bottom:0; }
+      .bank-legend .sw{ width:10px; height:10px; border-radius:2px; flex:none; }
+      .bank-legend .bv{ margin-left:auto; font-family:"IBM Plex Mono", monospace; font-size:12.5px; font-weight:600; white-space:nowrap; }
+      .bank-scale{ display:flex; justify-content:space-between; font-family:"IBM Plex Mono", monospace; font-size:10px; color:var(--muted); margin-top:5px; }
+
+      /* ---------- alarms ---------- */
+      .alarm-list{ list-style:none; margin:0; padding:0; }
+      .alarm-list li{ display:flex; gap:11px; padding:11px 0; border-bottom:1px solid var(--edge); align-items:flex-start; }
+      .alarm-list li:last-child{ border-bottom:0; padding-bottom:2px; }
+      .alarm-list .lamp{ margin-top:4px; }
+      .a-body{ flex:1; min-width:0; }
+      .a-title{ font-weight:600; font-size:14.5px; }
+      .a-meta{ font-family:"IBM Plex Mono", monospace; font-size:11px; color:var(--muted); margin-top:1px; }
+      .a-desc{ color:var(--muted); font-size:13px; margin-top:2px; }
+      .ack-btn{
+        appearance:none; cursor:pointer; flex:none; margin-top:2px;
+        font-family:"IBM Plex Mono", monospace; font-size:10px; font-weight:700; letter-spacing:.06em;
+        border:1px solid var(--bezel); background:var(--panel2); color:var(--muted);
+        border-radius:3px; padding:7px 9px; min-height:32px;
+      }
+      .ack-btn.acked{ border-color:var(--green); color:var(--green); }
+      li.acked .a-title, li.acked .a-desc{ opacity:.55; }
+
+      /* ---------- paper log ---------- */
+      .log-scroll{ overflow-x:auto; }
+      .log{ width:100%; border-collapse:collapse; min-width:760px; }
+      .log th{
+        font-family:"IBM Plex Mono", monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase;
+        color:var(--muted); text-align:right; padding:7px 9px; border-bottom:2px solid var(--bezel); white-space:nowrap;
+      }
+      .log th:first-child{ text-align:left; }
+      .log td{
+        font-family:"IBM Plex Mono", monospace; font-size:12.5px; text-align:right;
+        padding:7px 9px; border-bottom:1px solid var(--edge); white-space:nowrap;
+      }
+      .log td:first-child{ text-align:left; font-weight:600; }
+      .log tr.today td{ background:var(--panel2); font-weight:700; }
+      .log tfoot td{ font-weight:700; border-top:2px solid var(--bezel); border-bottom:0; }
+      @media (max-width:760px){
+        .log-scroll{ overflow-x:visible; }
+        .log{ min-width:0; }
+        .log thead{ display:none; }
+        .log, .log tbody, .log tr, .log td{ display:block; width:100%; }
+        .log tr{ border:1px solid var(--edge); border-radius:5px; padding:9px 12px; margin-bottom:9px; background:var(--panel2); }
+        .log td{ border:0; padding:2px 0; text-align:left; display:flex; justify-content:space-between; gap:10px; }
+        .log td::before{ content:attr(data-l); font-size:10px; letter-spacing:.08em; color:var(--faint); text-transform:uppercase; }
+        .log tfoot{ display:block; } .log tfoot tr{ background:var(--inset); }
+      }
+      .dl-btn{
+        appearance:none; cursor:pointer; display:inline-flex; align-items:center; gap:8px;
+        font-family:"IBM Plex Mono", monospace; font-size:12px; font-weight:700; letter-spacing:.04em;
+        background:var(--ink); color:var(--bg); border:1px solid var(--ink); border-radius:4px;
+        padding:10px 14px; min-height:42px; text-decoration:none;
+      }
+      @media (max-width:640px){
+        .p-right{ margin-left:0; width:100%; }
+        .p-right .seg{ display:flex; flex:1 1 100%; }
+        .p-right .seg button{ flex:1 1 0; padding-left:6px; padding-right:6px; }
+      }
+      /* ---------- master view ---------- */
+      .view-controls{ display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; margin-bottom:12px; }
+      .view-controls .seg{ flex:none; }
+      .unit-select-label{
+        font-family:"IBM Plex Mono", monospace; font-size:10px; font-weight:600; letter-spacing:.1em;
+        color:var(--muted); text-transform:uppercase; display:flex; flex-direction:column; gap:5px; flex:1 1 230px;
+      }
+      #unitSelect{
+        font-family:"IBM Plex Mono", monospace; font-size:13px; font-weight:600;
+        padding:9px 10px; min-height:40px; width:100%;
+        border:1px solid var(--bezel); border-radius:4px; background:var(--inset); color:var(--ink);
+      }
+      #unitSelect:focus-visible, .unit-card:focus-visible{ outline:2px solid var(--cyan); outline-offset:2px; }
+      .view-state{
+        font-family:"IBM Plex Mono", monospace; font-size:11px; font-weight:700; letter-spacing:.06em;
+        border:1px solid var(--bezel); border-radius:3px; padding:5px 8px; background:var(--panel2); color:var(--ink);
+      }
+      .combined-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:14px; }
+      @media (max-width:900px){ .combined-grid{ grid-template-columns:repeat(2,1fr); } }
+      @media (max-width:520px){ .combined-grid{ grid-template-columns:1fr; } }
+      .c-box{
+        background:var(--inset); border:1px solid var(--bezel); border-radius:4px;
+        padding:10px 11px 9px; box-shadow: inset 0 2px 6px rgba(0,0,0,.14);
+      }
+      .c-box .c-label{ font-family:"IBM Plex Mono", monospace; font-size:10px; font-weight:600; letter-spacing:.1em; color:var(--muted); text-transform:uppercase; }
+      .c-box .c-value{ font-family:"IBM Plex Mono", monospace; font-weight:700; color:var(--digits); font-size:clamp(19px,2.4vw,25px); line-height:1.25; white-space:nowrap; }
+      @media (prefers-color-scheme: light){ .c-box .c-value{ text-shadow:none; } }
+      .c-box .c-scope{ color:var(--muted); font-size:12px; margin-top:2px; }
+      .unit-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:8px; }
+      @media (max-width:1000px){ .unit-grid{ grid-template-columns:repeat(3,1fr); } }
+      @media (max-width:700px){ .unit-grid{ grid-template-columns:repeat(2,1fr); } }
+      @media (max-width:400px){ .unit-grid{ grid-template-columns:1fr; } }
+      .unit-card{
+        appearance:none; text-align:left; cursor:pointer; color:var(--ink);
+        background:var(--panel2); border:1px solid var(--bezel); border-radius:5px;
+        padding:9px 10px; display:flex; flex-direction:column; gap:3px; min-height:44px; width:100%;
+      }
+      .unit-card.sel{ border-color:var(--ink); box-shadow: inset 0 0 0 1px var(--ink); background:var(--inset); }
+      .unit-card .u-top{ display:flex; align-items:center; gap:7px; }
+      .unit-card .u-plat{ font-family:"IBM Plex Mono", monospace; font-size:9.5px; font-weight:600; letter-spacing:.09em; color:var(--muted); text-transform:uppercase; }
+      .unit-card .u-name{ font-family:"Barlow Condensed", sans-serif; font-size:17px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; line-height:1.1; overflow-wrap:anywhere; }
+      .unit-card .u-meta{ display:flex; align-items:center; justify-content:space-between; gap:8px; font-family:"IBM Plex Mono", monospace; font-size:11px; margin-top:2px; }
+      .unit-card .u-foll{ font-weight:700; white-space:nowrap; }
+      .unit-card .u-foll.none{ color:var(--faint); font-weight:500; }
+      .unit-card .u-status{ color:var(--muted); font-weight:600; letter-spacing:.04em; white-space:nowrap; }
+      .single-detail{
+        border:1px dashed var(--bezel); border-radius:5px; padding:12px 13px; margin-bottom:14px; background:var(--panel2);
+      }
+      .sd-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px 16px; }
+      @media (max-width:900px){ .sd-grid{ grid-template-columns:repeat(2,1fr); } }
+      @media (max-width:480px){ .sd-grid{ grid-template-columns:1fr; } }
+      .sd-l{ font-family:"IBM Plex Mono", monospace; font-size:9px; font-weight:600; letter-spacing:.1em; color:var(--faint); text-transform:uppercase; margin-bottom:2px; }
+      .sd-v{ font-weight:600; font-size:14.5px; }
+      .sd-v.mono{ font-size:14px; }
+      .sd-note{ color:var(--muted); font-size:13px; margin:10px 0 0; }
+      .nosignal{
+        border:1px solid var(--bezel); border-radius:5px; padding:16px; margin-top:14px; background:var(--panel);
+        box-shadow:var(--shadow); display:flex; gap:12px; align-items:flex-start;
+      }
+      .nosignal .lamp{ margin-top:5px; }
+      .nosignal .ns-title{ font-family:"Barlow Condensed", sans-serif; font-size:19px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; }
+      .nosignal .ns-body{ color:var(--muted); font-size:13.5px; margin-top:3px; max-width:72ch; }
+
+      footer{ margin-top:16px; color:var(--muted); font-size:12.5px; }
+      footer .mono{ font-size:11.5px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <!-- ============ STATUS STRIP ============ -->
+      <div class="statusbar" role="region" aria-label="System status">
+        <div class="sb-item">
+          <span class="lamp g pulse" aria-hidden="true"></span>
+          <div>
+            <div class="sb-label">System · OTG-01 Master Station</div>
+            <div class="sb-value ok">Line Running</div>
+          </div>
+        </div>
+        <div class="sb-sep" aria-hidden="true"></div>
+        <div class="sb-item">
+          <div>
+            <div class="sb-label">Panel Clock · Philadelphia</div>
+            <div class="sb-clock" id="clock">—</div>
+          </div>
+        </div>
+        <div class="sb-sep" aria-hidden="true"></div>
+        <div class="sb-item">
+          <div>
+            <div class="sb-label">Last Data Pull</div>
+            <div class="sb-clock">NOV 4, 2026 · X ANALYTICS</div>
+          </div>
+        </div>
+        <div class="sb-item" style="margin-left:auto">
+          <span class="alarm-chip" id="alarmChip"><span class="lamp r" style="width:8px;height:8px" aria-hidden="true"></span><span id="alarmChipTxt">ALARMS: 1 ACTIVE</span></span>
+        </div>
+      </div>
+
+      <!-- ============ MASTER VIEW ============ -->
+      <section class="panel" aria-label="Master view — all units together or page by page" style="margin-top:14px">
+        <div class="p-head">
+          <span class="p-tag">PNL-00</span>
+          <h2 class="p-title">Master View — All Together / Page by Page</h2>
+          <div class="p-right"><span class="view-state" id="viewState">SHOWING: ALL UNITS COMBINED</span></div>
+        </div>
+        <div class="view-controls">
+          <div class="seg" role="group" aria-label="Master view mode">
+            <button type="button" id="modeAll" aria-pressed="true">ALL UNITS TOGETHER</button>
+            <button type="button" id="modeSingle" aria-pressed="false">PAGE BY PAGE</button>
+          </div>
+          <label class="unit-select-label" for="unitSelect">Unit — pick one to view it alone
+            <select id="unitSelect">
+              <option value="all">ALL UNITS — WHOLE BRAND</option>
+            </select>
+          </label>
+        </div>
+
+        <div id="allSummary">
+          <div class="combined-grid">
+            <div class="c-box">
+              <div class="c-label">Combined Audience — Counted</div>
+              <div class="c-value">323,891+</div>
+              <div class="c-scope">The 5 units with a platform readout in the Road to 1,000,000 bar (PNL-07).</div>
+            </div>
+            <div class="c-box">
+              <div class="c-label">Combined Audience — Your Estimate</div>
+              <div class="c-value">~500,000</div>
+              <div class="c-scope">Every Page and account together, including the ones with no readout pulled yet.</div>
+            </div>
+            <div class="c-box">
+              <div class="c-label">Impressions — Full Year</div>
+              <div class="c-value">116,216,023</div>
+              <div class="c-scope">@ParisEighty on X only — the one unit with a full analytics export. Other units are not folded into this number.</div>
+            </div>
+            <div class="c-box">
+              <div class="c-label">Facebook Pages</div>
+              <div class="c-value">14 OWNED · 7 ACTIVE</div>
+              <div class="c-scope">The posting rotation runs on the 7 active Pages only. 7 sit dormant, listed below.</div>
+            </div>
+            <div class="c-box">
+              <div class="c-label">Income Lines Reading</div>
+              <div class="c-value">3 OF 7</div>
+              <div class="c-scope">Gumroad, Merch Store and Podcast + Live are running — full detail in PNL-06.</div>
+            </div>
+            <div class="c-box">
+              <div class="c-label">Units On This Board</div>
+              <div class="c-value">22 LISTED · 1 FULL</div>
+              <div class="c-scope">22 pages and accounts in the index below. 1 — @ParisEighty on X — has full charts and a daily log so far.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="single-detail" id="singleDetail" hidden></div>
+
+        <h3 class="cond" style="font-size:16px;letter-spacing:.06em;text-transform:uppercase;margin:4px 0 2px">Unit Index — Every Page &amp; Account · Tap One To View It Alone</h3>
+        <div class="unit-grid" id="unitGrid"></div>
+        <p class="p-note">Combined totals only add up units with a readout on file. A unit marked <b>NO SIGNAL</b> has no export pulled for it yet — that is a sensor to wire, not a zero, and its numbers are not hidden inside the @ParisEighty charts.</p>
+      </section>
+
+      <div class="nosignal" id="noSignalPanel" hidden>
+        <span class="lamp off" aria-hidden="true"></span>
+        <div>
+          <div class="ns-title" id="noSignalTitle">No detailed chart for this unit yet</div>
+          <div class="ns-body" id="noSignalBody"></div>
+        </div>
+      </div>
+
+      <!-- ============ READOUTS ============ -->
+      <section class="panel x-only" aria-label="Key readouts" style="margin-top:14px">
+        <div class="p-head">
+          <span class="p-tag">PNL-01</span>
+          <h1 class="p-title">@ParisEighty — Output Readouts</h1>
+          <div class="p-right">
+            <div class="seg" role="group" aria-label="Readout window">
+              <button type="button" data-win="7D" aria-pressed="true">7 DAYS</button>
+              <button type="button" data-win="30D" aria-pressed="false">30 DAYS</button>
+              <button type="button" data-win="1YR" aria-pressed="false">FULL YEAR</button>
+            </div>
+          </div>
+        </div>
+        <div class="readouts" id="readouts"></div>
+        <p class="p-note" id="winNote">Window: Oct 29 – Nov 4, 2026 · deltas vs the prior 7 days (Oct 22–28). Source: X Analytics account overview export.</p>
+      </section>
+
+      <!-- ============ TREND + CADENCE ============ -->
+      <div class="grid-main x-only">
+        <section class="panel" aria-label="Trend chart">
+          <div class="p-head">
+            <span class="p-tag">PNL-02</span>
+            <h2 class="p-title">Trend Recorder</h2>
+            <div class="p-right">
+              <div class="seg" role="group" aria-label="Trend channel">
+                <button type="button" data-ch="1" aria-pressed="true">IMPRESSIONS</button>
+                <button type="button" data-ch="2" aria-pressed="false">ENGAGE</button>
+                <button type="button" data-ch="3" aria-pressed="false">NET FOLLOWS</button>
+              </div>
+              <div class="seg" role="group" aria-label="Trend range">
+                <button type="button" data-rg="30" aria-pressed="true">30D</button>
+                <button type="button" data-rg="90" aria-pressed="false">90D</button>
+              </div>
+            </div>
+          </div>
+          <div class="chart-wrap" id="trendWrap"></div>
+          <div class="cursor-line" id="trendCursor">CURSOR — move across the chart</div>
+          <p class="p-note">Daily values from the year export (Nov 4, 2025 – Nov 4, 2026); final day from the latest 7-day pull. The Oct 21–22 spike was reach without conversation — 3.03M impressions at a 0.29% engagement rate.</p>
+        </section>
+
+        <section class="panel" aria-label="Posting cadence">
+          <div class="p-head">
+            <span class="p-tag">PNL-03</span>
+            <h2 class="p-title">Output Rate</h2>
+            <div class="p-right"><span class="lamp g" aria-hidden="true"></span><span class="mono" style="font-size:11px;font-weight:700;color:var(--green)">AT SETPOINT</span></div>
+          </div>
+          <div id="rates"></div>
+          <h3 class="cond" style="font-size:16px;letter-spacing:.06em;text-transform:uppercase;margin:16px 0 2px">Rotation Cycle · 6 slots · repeats every 3 hrs</h3>
+          <div class="cycle" aria-label="Posting rotation cycle">
+            <div class="cyc"><div class="c-name">Video</div><div class="c-per">8 / DAY</div></div><span class="cyc-arrow">→</span>
+            <div class="cyc"><div class="c-name">Question</div><div class="c-per">PART OF 24 / DAY</div></div><span class="cyc-arrow">→</span>
+            <div class="cyc"><div class="c-name">Picture</div><div class="c-per">8 / DAY</div></div><span class="cyc-arrow">→</span>
+            <div class="cyc"><div class="c-name">Question</div><div class="c-per">PART OF 24 / DAY</div></div><span class="cyc-arrow">→</span>
+            <div class="cyc"><div class="c-name">Grid</div><div class="c-per">8 / DAY</div></div><span class="cyc-arrow">→</span>
+            <div class="cyc"><div class="c-name">Question</div><div class="c-per">PART OF 24 / DAY</div></div>
+          </div>
+          <p class="p-note">2 posts an hour, 24/7 = 48 a day. Last 7 days ran 49.6 a day — the rotation is holding the rate you set.</p>
+        </section>
+      </div>
+
+      <!-- ============ MONTHLY + MIX ============ -->
+      <div class="grid-main x-only">
+        <section class="panel" aria-label="Monthly output">
+          <div class="p-head">
+            <span class="p-tag">PNL-04</span>
+            <h2 class="p-title">Monthly Output — Impressions</h2>
+            <div class="p-right"><span class="mono" style="font-size:11px;color:var(--muted)">MILLIONS · BARS FROM ZERO</span></div>
+          </div>
+          <div class="bars-area" id="barsArea">
+            <div class="bars-grid" id="barsGrid"></div>
+            <div class="bars-row" id="barsRow"></div>
+          </div>
+          <div class="bars-labels" id="barsLabels"></div>
+          <div class="cursor-line" id="monthCursor">SELECTED — tap a bar for the month detail</div>
+          <p class="p-note">Nov 2025 starts Nov 4 (first day of the export). Nov 2026 is 4 days only — hatched, still running.</p>
+        </section>
+
+        <section class="panel" aria-label="Engagement mix">
+          <div class="p-head">
+            <span class="p-tag">PNL-05</span>
+            <h2 class="p-title">Engagement Mix</h2>
+            <div class="p-right"><span class="mono" style="font-size:11px;color:var(--muted)">LAST 7 DAYS</span></div>
+          </div>
+          <div class="mix-bar" id="mixBar" role="img" aria-label="Engagement mix: likes 60.3 percent, reposts 17.8 percent, bookmarks 13.2 percent, replies 4.1 percent, other unitemized 3.7 percent, shares 1.0 percent"></div>
+          <ul class="mix-legend" id="mixLegend"></ul>
+          <p class="p-note">Total engagements: <b class="mono">74,489</b> — the itemized actions sum to 71,727; the export doesn't break out the remaining 2,762. Bookmarks jumped hardest — 9,828 this week vs 3,425 the week before (+187%). Saves are people keeping the post, not just passing it.</p>
+        </section>
+      </div>
+
+      <!-- ============ SEVEN LINES ============ -->
+      <section class="panel" aria-label="Seven income lines">
+        <div class="p-head">
+          <span class="p-tag">PNL-06</span>
+          <h2 class="p-title">The 7 Lines — Income Streams</h2>
+          <div class="p-right"><span class="mono" style="font-size:11px;color:var(--muted)">STATUS AS OF NOV 4, 2026</span></div>
+        </div>
+        <div class="goal-strip">
+          <span class="lamp a" aria-hidden="true"></span>
+          <span class="goal-big">TARGET&nbsp;&nbsp;$10,000 / MO</span>
+          <span class="goal-txt">from everything digital. A line marked <b>NO SIGNAL</b> has no current figure pulled yet — that's a sensor to wire, not a zero. 3 of 7 lines are reading now.</span>
+        </div>
+        <table class="lines">
+          <thead>
+            <tr><th scope="col">Line</th><th scope="col">Stream</th><th scope="col">Money Routes To</th><th scope="col">Last Readout</th><th scope="col">Status</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="line-no" data-l="Line">LN-01</td>
+              <td data-l="Stream"><div class="line-name">Gumroad</div><div class="line-sub">Drum kits, tutorials, books, memberships — charlesparismusic.gumroad.com</div></td>
+              <td data-l="Routes to">Store money — family &amp; the girls</td>
+              <td data-l="Last readout"><span class="line-read">$9,474.26</span><div class="line-sub">lifetime net · through the Nov 3 payout (+$20.35)</div></td>
+              <td data-l="Status"><span class="status-cell"><span class="lamp g"></span>RUNNING</span></td>
+            </tr>
+            <tr>
+              <td class="line-no" data-l="Line">LN-02</td>
+              <td data-l="Stream"><div class="line-name">Merch Store</div><div class="line-sub">Printful — tees $35, hoodies $65, premium tier up to the $150 varsity</div></td>
+              <td data-l="Routes to">Store money — family &amp; the girls</td>
+              <td data-l="Last readout"><span class="line-read">36 PRODUCTS LIVE</span><div class="line-sub">store open · billing/payout method still to be added by you</div></td>
+              <td data-l="Status"><span class="status-cell"><span class="lamp g"></span>RUNNING</span></td>
+            </tr>
+            <tr>
+              <td class="line-no" data-l="Line">LN-03</td>
+              <td data-l="Stream"><div class="line-name">Social Payouts</div><div class="line-sub">X, YouTube, Facebook, Substack, Patreon</div></td>
+              <td data-l="Routes to">Pays for the business &amp; you</td>
+              <td data-l="Last readout"><span class="line-read">X ≈ $3,000 / MO</span><div class="line-sub">self-reported Oct 27 — re-pull pending. Facebook: $3–4K/mo last Mar–May, ~$100/mo lately (reported)</div></td>
+              <td data-l="Status"><span class="status-cell"><span class="lamp a"></span>STALE DATA</span></td>
+            </tr>
+            <tr>
+              <td class="line-no" data-l="Line">LN-04</td>
+              <td data-l="Stream"><div class="line-name">Music</div><div class="line-sub">Streaming, Content ID, licensing, ASCAP — the cover when socials dip</div></td>
+              <td data-l="Routes to">Cover — holds the floor when socials drop</td>
+              <td data-l="Last readout"><span class="line-read none">— NO READOUT PULLED —</span><div class="line-sub">catalog releasing since 2008 · ASCAP repertory member</div></td>
+              <td data-l="Status"><span class="status-cell"><span class="lamp off"></span>NO SIGNAL</span></td>
+            </tr>
+            <tr>
+              <td class="line-no" data-l="Line">LN-05</td>
+              <td data-l="Stream"><div class="line-name">Affiliates</div><div class="line-sub">Amazon storefront + gear links</div></td>
+              <td data-l="Routes to">Half pays you · half saves</td>
+              <td data-l="Last readout"><span class="line-read none">— NO READOUT PULLED —</span><div class="line-sub">storefront live · split rule set: ½ spend / ½ save</div></td>
+              <td data-l="Status"><span class="status-cell"><span class="lamp off"></span>NO SIGNAL</span></td>
+            </tr>
+            <tr>
+              <td class="line-no" data-l="Line">LN-06</td>
+              <td data-l="Stream"><div class="line-name">Donations</div><div class="line-sub">Support OTG — tips &amp; coffee from the audience</div></td>
+              <td data-l="Routes to">Direct support</td>
+              <td data-l="Last readout"><span class="line-read none">— NO READOUT PULLED —</span></td>
+              <td data-l="Status"><span class="status-cell"><span class="lamp off"></span>NO SIGNAL</span></td>
+            </tr>
+            <tr>
+              <td class="line-no" data-l="Line">LN-07</td>
+              <td data-l="Stream"><div class="line-name">Podcast + Live</div><div class="line-sub">ONE TRUE HISTORY UNCOVERED · Talk Spaces · sponsorships</div></td>
+              <td data-l="Routes to">Pays for the business &amp; you</td>
+              <td data-l="Last readout"><span class="line-read">SHOW LIVE</span><div class="line-sub">on Apple Podcasts · no revenue readout yet</div></td>
+              <td data-l="Status"><span class="status-cell"><span class="lamp g"></span>RUNNING</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ============ FOLLOWER BANK + ALARMS ============ -->
+      <div class="grid2">
+        <section class="panel" aria-label="Road to one million followers">
+          <div class="p-head">
+            <span class="p-tag">PNL-07</span>
+            <h2 class="p-title">Road to 1,000,000</h2>
+          </div>
+          <div class="bank-total">323,891+ <span style="font-size:14px;color:var(--muted)">counted</span> · ~500,000 <span style="font-size:14px;color:var(--muted)">your combined estimate</span></div>
+          <div class="bank-bar" role="img" aria-label="Progress bar to one million followers: 323,891 counted from platform readouts, about 500,000 by combined estimate">
+            <div style="width:7.4%;background:#4fd8e8"></div>
+            <div style="width:21.43%;background:#2f9ee6"></div>
+            <div style="width:2.61%;background:#ff5147"></div>
+            <div style="width:0.8%;background:#ffb224"></div>
+            <div style="width:0.15%;background:#2fe673"></div>
+            <div class="bank-est" style="width:17.61%"></div>
+          </div>
+          <div class="bank-scale"><span>0</span><span>COUNTED 32.4%</span><span>EST. 50%</span><span>1,000,000</span></div>
+          <ul class="bank-legend">
+            <li><span class="sw" style="background:#4fd8e8"></span>X — @ParisEighty (main)<span class="bv">74,000+</span></li>
+            <li><span class="sw" style="background:#2f9ee6"></span>Facebook — Real Hip Hop (largest of 14 Pages)<span class="bv">214,289</span></li>
+            <li><span class="sw" style="background:#ff5147"></span>YouTube — @ParisEighty · 3.7K videos · verified artist channel<span class="bv">26,102</span></li>
+            <li><span class="sw" style="background:#ffb224"></span>X — @SupplyTheWork (brand)<span class="bv">~8,000</span></li>
+            <li><span class="sw" style="background:#2fe673"></span>Substack — O.T.G News<span class="bv">~1,500</span></li>
+            <li><span class="sw" style="background:var(--off)"></span>Hatched — the rest of the combined estimate (other Pages, @365OTG, TikTok, IG)<span class="bv">~176,000</span></li>
+          </ul>
+          <p class="p-note">Counted = figures read off the platforms. The other 13 Facebook Pages aren't in the counted bar yet — their readouts get added as they're pulled.</p>
+        </section>
+
+        <section class="panel" aria-label="Alarm and event log">
+          <div class="p-head">
+            <span class="p-tag">PNL-08</span>
+            <h2 class="p-title">Alarm &amp; Event Log</h2>
+            <div class="p-right"><span class="mono" style="font-size:11px;color:var(--muted)">ACK = SEEN IT</span></div>
+          </div>
+          <ul class="alarm-list" id="alarmList">
+            <li data-sev="alarm">
+              <span class="lamp r"></span>
+              <div class="a-body">
+                <div class="a-title">Hip Hop Daily (larger Page) — monetization restricted</div>
+                <div class="a-meta">ALARM · STANDING · FLAGGED FOR UNORIGINAL / REUSED CONTENT</div>
+                <div class="a-desc">~49,664 followers. Your archive curation is the work — the flag is on the format, not a copyright claim. Earnings route around it: X and YouTube carry the money while this stands.</div>
+              </div>
+              <button type="button" class="ack-btn">ACK</button>
+            </li>
+            <li data-sev="warn">
+              <span class="lamp a"></span>
+              <div class="a-body">
+                <div class="a-title">Oct 21–22 reach spike didn't convert</div>
+                <div class="a-meta">WARNING · OCT 22, 2026</div>
+                <div class="a-desc">3,025,539 impressions in two days at 0.29% engagement and only +226 net follows. Reach ran hot; conversation didn't follow. Watch for the next spike's follow-through.</div>
+              </div>
+              <button type="button" class="ack-btn">ACK</button>
+            </li>
+            <li data-sev="event">
+              <span class="lamp g"></span>
+              <div class="a-body">
+                <div class="a-title">Best follow day since March: +687 net</div>
+                <div class="a-meta">EVENT · OCT 12, 2026</div>
+                <div class="a-desc">716 new follows in one day (net +687 after unfollows), on 572,214 impressions with a 2.6% engagement rate — the healthy kind of spike.</div>
+              </div>
+              <button type="button" class="ack-btn">ACK</button>
+            </li>
+            <li data-sev="event">
+              <span class="lamp g"></span>
+              <div class="a-body">
+                <div class="a-title">Cadence hit setpoint</div>
+                <div class="a-meta">EVENT · NOV 4, 2026</div>
+                <div class="a-desc">347 posts in 7 days = 49.6/day against the 48/day target. The full-year average across the line was 27.8/day.</div>
+              </div>
+              <button type="button" class="ack-btn">ACK</button>
+            </li>
+            <li data-sev="event">
+              <span class="lamp g"></span>
+              <div class="a-body">
+                <div class="a-title">All-time record day: 4,415,132 impressions</div>
+                <div class="a-meta">RECORD · MAR 27, 2026</div>
+                <div class="a-desc">Followed four days later by the best follow day of the year — Mar 31, +1,412 net (1,440 new).</div>
+              </div>
+              <button type="button" class="ack-btn">ACK</button>
+            </li>
+          </ul>
+        </section>
+      </div>
+
+      <!-- ============ PAPER LOG ============ -->
+      <section class="panel x-only" aria-label="Daily log sheet">
+        <div class="p-head">
+          <span class="p-tag">PNL-09</span>
+          <h2 class="p-title">Paper Log — Last 14 Days</h2>
+          <div class="p-right">
+            <button type="button" class="dl-btn" id="csvBtn">↓ DOWNLOAD LOG (.CSV)</button>
+          </div>
+        </div>
+        <div class="log-scroll">
+          <table class="log" id="logTable">
+            <thead>
+              <tr><th scope="col">Date</th><th scope="col">Impressions</th><th scope="col">Engagements</th><th scope="col">Likes</th><th scope="col">Reposts</th><th scope="col">Replies</th><th scope="col">Bookmarks</th><th scope="col">Posts</th><th scope="col">Net Follows</th></tr>
+            </thead>
+            <tbody id="logBody"></tbody>
+            <tfoot id="logFoot"></tfoot>
+          </table>
+        </div>
+        <p class="p-note">The spreadsheet, kept the way the plant kept it — one row a day, every number accounted for. Oct 29 – Nov 4 from the latest 7-day export; Oct 22–28 from the year export (the two pulls differ slightly on Nov 4: 693,549 latest vs 695,391 in the year file — latest is shown).</p>
+      </section>
+
+      <footer>
+        <p><span class="mono">SOURCE</span> — X Analytics account-overview exports for @ParisEighty: full year Nov 4, 2025 – Nov 4, 2026 (366 days, 116,216,023 impressions) and the latest 7-day pull. Gumroad, store, follower and payout figures are the last readouts on file, dated where shown. This panel is a snapshot — it updates when a new export is pulled, the way the paper log got a new sheet. Next scheduled pull: Monday.</p>
+      </footer>
+    </main>
+
+    <script>
+      /* ================= DATA (from the X Analytics exports, computed from the rows) ================= */
+      var D90 = [["2026-08-07",445594,5038,26],["2026-08-08",405009,4656,21],["2026-08-09",737324,8279,48],["2026-08-10",512036,6591,20],["2026-08-11",631516,6463,22],["2026-08-12",266515,2670,17],["2026-08-13",273285,2774,7],["2026-08-14",173719,3727,21],["2026-08-15",369501,3104,23],["2026-08-16",236203,2214,20],["2026-08-17",102431,914,-1],["2026-08-18",82442,853,5],["2026-08-19",121002,1630,8],["2026-08-20",893186,8357,80],["2026-08-21",784342,10331,95],["2026-08-22",191568,4120,26],["2026-08-23",241092,5368,25],["2026-08-24",183691,4252,32],["2026-08-25",297093,8402,67],["2026-08-26",236253,8134,44],["2026-08-27",239815,8509,60],["2026-08-28",523340,10760,29],["2026-08-29",419273,10775,57],["2026-08-30",746229,14487,96],["2026-08-31",998703,14361,138],["2026-09-01",591698,8092,67],["2026-09-02",359894,4581,26],["2026-09-03",603481,5478,33],["2026-09-04",405328,5188,37],["2026-09-05",530488,8469,56],["2026-09-06",560844,12505,371],["2026-09-07",505864,8184,161],["2026-09-08",408657,7120,110],["2026-09-09",313600,6452,119],["2026-09-10",315669,7485,100],["2026-09-11",446880,7989,114],["2026-09-12",450315,9726,195],["2026-09-13",513788,13540,161],["2026-09-14",445474,10728,75],["2026-09-15",396189,9333,59],["2026-09-16",417466,7811,53],["2026-09-17",408835,6037,65],["2026-09-18",408230,8472,43],["2026-09-19",494929,12457,58],["2026-09-20",555412,10947,39],["2026-09-21",368826,7016,33],["2026-09-22",501206,10233,62],["2026-09-23",340943,7870,36],["2026-09-24",303512,10131,82],["2026-09-25",360947,9147,65],["2026-09-26",237199,4472,34],["2026-09-27",199241,4046,21],["2026-09-28",100116,2852,50],["2026-09-29",280276,8686,93],["2026-09-30",323666,8306,51],["2026-10-01",333240,8319,49],["2026-10-02",422526,11488,54],["2026-10-03",397025,9977,49],["2026-10-04",322284,4879,15],["2026-10-05",290530,3940,9],["2026-10-06",309992,5470,28],["2026-10-07",265399,5096,19],["2026-10-08",346248,4324,30],["2026-10-09",315803,7602,18],["2026-10-10",109887,1219,4],["2026-10-11",274434,7426,33],["2026-10-12",572214,14920,687],["2026-10-13",368162,7546,248],["2026-10-14",345239,9394,98],["2026-10-15",366226,7528,51],["2026-10-16",864320,9148,130],["2026-10-17",890178,6400,115],["2026-10-18",820191,11719,144],["2026-10-19",722433,10799,123],["2026-10-20",491054,7365,67],["2026-10-21",1567061,5888,129],["2026-10-22",1458478,3021,97],["2026-10-23",504472,3668,42],["2026-10-24",361412,2873,38],["2026-10-25",374331,5209,45],["2026-10-26",591670,5769,73],["2026-10-27",467941,7991,101],["2026-10-28",265053,4977,30],["2026-10-29",381748,6842,50],["2026-10-30",652818,13100,83],["2026-10-31",525887,12855,119],["2026-11-01",622656,12797,110],["2026-11-02",582691,9876,93],["2026-11-03",453282,8576,63],["2026-11-04",693549,10443,92]];
+      /* [month, impressions, engagements, net follows, posts] */
+      var MONTHLY = [["2025-11",4374708,171152,1211,654],["2025-12",3142482,125746,316,663],["2026-01",19067380,539207,3031,744],["2026-02",10633389,330732,1703,634],["2026-03",14844333,345143,3088,991],["2026-04",4242522,152484,606,713],["2026-05",5763642,132504,947,805],["2026-06",5175698,114210,374,598],["2026-07",6483420,136198,503,715],["2026-08",12007200,180394,1214,1037],["2026-09",12148973,243353,2469,1090],["2026-10",15978256,226752,2778,1330],["2026-11",2354020,41719,359,202]];
+      /* [date, impressions, engagements, likes, reposts, replies, bookmarks, posts, net follows] */
+      var LOG14 = [["2026-10-22",1458478,3021,1175,439,187,292,32,97],["2026-10-23",504472,3668,1858,718,160,348,38,42],["2026-10-24",361412,2873,1427,517,165,289,30,38],["2026-10-25",374331,5209,3045,1034,85,594,49,45],["2026-10-26",591670,5769,3317,1167,91,690,32,73],["2026-10-27",467941,7991,4962,1581,233,675,50,101],["2026-10-28",265053,4977,2872,1055,188,537,22,30],["2026-10-29",381748,6842,4005,1359,345,765,45,50],["2026-10-30",652818,13100,8132,2275,456,1653,50,83],["2026-10-31",525887,12855,8191,2153,445,1611,50,119],["2026-11-01",622656,12797,7474,2058,398,2331,53,110],["2026-11-02",582691,9876,5772,1851,510,1238,53,93],["2026-11-03",453282,8576,5069,1625,477,941,50,63],["2026-11-04",693549,10443,6253,1924,408,1289,46,92]];
+      var WINDOWS = {
+        "7D": { note: "Window: Oct 29 – Nov 4, 2026 · deltas vs the prior 7 days (Oct 22–28). Source: X Analytics account overview export.",
+          rows: [
+            ["IMPRESSIONS","3,912,631","▼ 2.8%","down"],
+            ["ENGAGEMENTS","74,489","▲ 122.3%","up"],
+            ["ENGAGE RATE","1.90%","▲ 1.07 PTS","up"],
+            ["NET FOLLOWS","+610","▲ 43.2%","up"],
+            ["POSTS OUT","347","▲ 37.2%","up"],
+            ["PROFILE VISITS","2,762","▼ 22.1%","down"]
+          ]},
+        "30D": { note: "Window: Oct 6 – Nov 4, 2026 · deltas vs the prior 30 days (Sep 6 – Oct 5). Impressions ran hot on the Oct 21–22 spike, which dilutes the 30-day engagement rate.",
+          rows: [
+            ["IMPRESSIONS","16,566,671","▲ 45.0%","up"],
+            ["ENGAGEMENTS","229,868","▼ 8.1%","down"],
+            ["ENGAGE RATE","1.39%","▼ 0.80 PTS","down"],
+            ["NET FOLLOWS","+2,961","▲ 22.0%","up"],
+            ["POSTS OUT","1,286","▲ 10.4%","up"],
+            ["PROFILE VISITS","14,070","▲ 51.5%","up"]
+          ]},
+        "1YR": { note: "Window: Nov 4, 2025 – Nov 4, 2026 · 366 days · deltas replaced with full-year context (no prior year on file).",
+          rows: [
+            ["IMPRESSIONS","116,216,023","317,530 / DAY AVG","flat"],
+            ["ENGAGEMENTS","2,739,594","7,486 / DAY AVG","flat"],
+            ["ENGAGE RATE","2.36%","FULL-YEAR RATE","flat"],
+            ["NET FOLLOWS","+18,599","22,608 NEW · 4,009 LEFT","flat"],
+            ["POSTS OUT","10,176","27.8 / DAY AVG","flat"],
+            ["PROFILE VISITS","82,129","224 / DAY AVG","flat"]
+          ]}
+      };
+      var MIX = [
+        ["Likes",44896,"#2f9ee6"],["Reposts",13245,"#2fe673"],["Bookmarks",9828,"#ffb224"],
+        ["Replies",3039,"#4fd8e8"],["Other / unitemized",2762,"#84919b"],["Shares",719,"#ff5147"]
+      ];
+      var RATES = [
+        ["FULL-YEAR AVERAGE",27.8,false],["LAST 30 DAYS",42.9,false],["LAST 7 DAYS",49.6,true]
+      ];
+
+      /* ================= helpers ================= */
+      function fmt(n){ return n.toLocaleString("en-US"); }
+      function fmtM(v){
+        if (v >= 1000000) return (v/1000000).toFixed(v >= 10000000 ? 1 : 2).replace(/\.?0+$/,"") + "M";
+        if (v >= 1000) return Math.round(v/1000) + "K";
+        return "" + v;
+      }
+      var MON = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+      var DAY = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
+      function dstr(iso){
+        var p = iso.split("-"), d = new Date(+p[0], +p[1]-1, +p[2]);
+        return DAY[d.getDay()] + ", " + MON[+p[1]-1] + " " + (+p[2]);
+      }
+      function niceCeil(v){
+        if (v <= 0) return 1;
+        var p = Math.pow(10, Math.floor(Math.log10(v))), m = v / p;
+        var steps = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];
+        for (var i = 0; i < steps.length; i++) if (m <= steps[i]) return steps[i] * p;
+        return 10 * p;
+      }
+
+      /* ================= clock ================= */
+      function tickClock(){
+        try {
+          var f = new Intl.DateTimeFormat("en-US", { timeZone:"America/New_York", weekday:"short", month:"short", day:"numeric", hour:"2-digit", minute:"2-digit", second:"2-digit", hour12:false, timeZoneName:"short" });
+          document.getElementById("clock").textContent = f.format(new Date()).toUpperCase();
+        } catch(e) {
+          document.getElementById("clock").textContent = new Date().toLocaleTimeString("en-US");
+        }
+      }
+      tickClock(); setInterval(tickClock, 1000);
+
+      /* ================= readouts ================= */
+      function renderReadouts(key){
+        var w = WINDOWS[key], html = "";
+        for (var i = 0; i < w.rows.length; i++){
+          var r = w.rows[i];
+          html += '<div class="meter"><div class="m-label"><span>' + r[0] + '</span><span class="m-delta ' + r[3] + '">' + r[2] + '</span></div><div class="m-value">' + r[1] + '</div></div>';
+        }
+        document.getElementById("readouts").innerHTML = html;
+        document.getElementById("winNote").textContent = w.note;
+      }
+      renderReadouts("7D");
+      var winBtns = document.querySelectorAll("[data-win]");
+      winBtns.forEach(function(b){
+        b.addEventListener("click", function(){
+          winBtns.forEach(function(x){ x.setAttribute("aria-pressed","false"); });
+          b.setAttribute("aria-pressed","true");
+          renderReadouts(b.getAttribute("data-win"));
+        });
+      });
+
+      /* ================= output rate ================= */
+      (function(){
+        var html = "";
+        RATES.forEach(function(r){
+          var pct = Math.min(100, r[1] / 60 * 100);
+          html += '<div class="rate-row"><div class="rate-head"><span class="rate-name">' + r[0] + '</span><span class="rate-val">' + r[1].toFixed(1) + ' POSTS/DAY</span></div>'
+            + '<div class="rate-track"><div class="rate-fill' + (r[2] ? " hit" : "") + '" style="width:' + pct + '%"></div><div class="setpoint" style="left:80%"></div></div></div>';
+        });
+        document.getElementById("rates").innerHTML = html;
+      })();
+
+      /* ================= trend chart ================= */
+      var trendCh = 1, trendRg = 30;
+      var CHNAME = { 1:"IMPRESSIONS", 2:"ENGAGEMENTS", 3:"NET FOLLOWS" };
+      function drawTrend(){
+        var wrap = document.getElementById("trendWrap");
+        var W = Math.max(300, wrap.clientWidth || 700);
+        var H = W < 560 ? 228 : 292;
+        var data = D90.slice(-trendRg);
+        var vals = data.map(function(r){ return r[trendCh]; });
+        var maxV = niceCeil(Math.max.apply(null, vals));
+        var minV = trendCh === 3 ? Math.min(0, Math.min.apply(null, vals)) : 0;
+        /* snap the axis to round tick steps (e.g. net follows: -250 / 0 / 250 / 500 / 750) */
+        var step = niceCeil((maxV - minV) / 4);
+        minV = Math.floor(minV / step) * step;
+        maxV = minV + step * 4;
+        if (maxV < Math.max.apply(null, vals)) maxV += step;
+        var L = 54, R = 12, T = 16, B = 26, pw = W - L - R, ph = H - T - B;
+        function X(i){ return L + (data.length === 1 ? pw/2 : i * pw / (data.length - 1)); }
+        function Y(v){ return T + ph - (v - minV) / (maxV - minV) * ph; }
+        var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" height="' + H + '" role="img" aria-label="Daily ' + CHNAME[trendCh].toLowerCase() + ' trend, last ' + trendRg + ' days">';
+        var ticks = 4, i, v, y;
+        for (i = 0; i <= ticks; i++){
+          v = minV + (maxV - minV) * i / ticks; y = Y(v);
+          s += '<line class="grid-ln" x1="' + L + '" y1="' + y + '" x2="' + (W - R) + '" y2="' + y + '"/>';
+          s += '<text class="axis-txt" font-size="10" x="' + (L - 6) + '" y="' + (y + 3) + '" text-anchor="end">' + fmtM(Math.round(v)) + '</text>';
+        }
+        var nLab = trendRg === 30 ? 5 : 6;
+        for (i = 0; i < nLab; i++){
+          var idx = Math.round(i * (data.length - 1) / (nLab - 1));
+          var p = data[idx][0].split("-");
+          s += '<text class="axis-txt" font-size="10" x="' + X(idx) + '" y="' + (H - 8) + '" text-anchor="middle">' + MON[+p[1]-1] + " " + (+p[2]) + '</text>';
+        }
+        var line = "", area = "";
+        data.forEach(function(r, j){
+          var x = X(j).toFixed(1), yy = Y(r[trendCh]).toFixed(1);
+          line += (j === 0 ? "M" : "L") + x + "," + yy + " ";
+          area += (j === 0 ? "M" : "L") + x + "," + yy + " ";
+        });
+        area += "L" + X(data.length - 1).toFixed(1) + "," + Y(minV) + " L" + X(0).toFixed(1) + "," + Y(minV) + " Z";
+        var col = getComputedStyle(document.documentElement).getPropertyValue("--cyan").trim() || "#4fd8e8";
+        s += '<path d="' + area + '" fill="' + col + '" opacity="0.16"/>';
+        s += '<path d="' + line + '" fill="none" stroke="' + col + '" stroke-width="2" stroke-linejoin="round"/>';
+        if (trendCh === 1){
+          for (i = 0; i < data.length; i++){
+            if (data[i][0] === "2026-10-21"){
+              var ax = X(i), ay = Y(data[i][1]);
+              var amb = getComputedStyle(document.documentElement).getPropertyValue("--amber").trim() || "#ffb224";
+              s += '<line x1="' + ax + '" y1="' + ay + '" x2="' + ax + '" y2="' + Y(minV) + '" stroke="' + amb + '" stroke-width="1" stroke-dasharray="3 3"/>';
+              s += '<circle cx="' + ax + '" cy="' + ay + '" r="4" fill="' + amb + '"/>';
+              var anchor = ax > W - 190 ? "end" : "start";
+              var tx = ax > W - 190 ? ax - 8 : ax + 8;
+              s += '<text class="annot-txt" font-size="10.5" x="' + tx + '" y="' + Math.max(12, ay - 8) + '" text-anchor="' + anchor + '">OCT 21 · 1.57M SPIKE</text>';
+            }
+          }
+        }
+        s += '<g id="cursorG" style="display:none"><line id="cursorLn" y1="' + T + '" y2="' + (T + ph) + '" stroke="' + col + '" stroke-width="1" opacity="0.6"/><circle id="cursorDot" r="4.5" fill="' + col + '" stroke="var(--panel)" stroke-width="1.5"/></g>';
+        s += '<rect id="trendHit" x="' + L + '" y="' + T + '" width="' + pw + '" height="' + ph + '" fill="transparent"/>';
+        s += "</svg>";
+        wrap.innerHTML = s;
+        var cursorEl = document.getElementById("trendCursor");
+        function showIdx(j){
+          var g = document.getElementById("cursorG"), ln = document.getElementById("cursorLn"), dt = document.getElementById("cursorDot");
+          if (!g) return;
+          g.style.display = "";
+          ln.setAttribute("x1", X(j)); ln.setAttribute("x2", X(j));
+          dt.setAttribute("cx", X(j)); dt.setAttribute("cy", Y(data[j][trendCh]));
+          cursorEl.innerHTML = "CURSOR — <b>" + dstr(data[j][0]) + "</b> · " + CHNAME[trendCh] + " <b>" + fmt(data[j][trendCh]) + "</b>";
+        }
+        function hideCursor(){
+          var g = document.getElementById("cursorG"); if (g) g.style.display = "none";
+          var last = data[data.length - 1];
+          cursorEl.innerHTML = "LATEST — <b>" + dstr(last[0]) + "</b> · " + CHNAME[trendCh] + " <b>" + fmt(last[trendCh]) + "</b> · move across the chart for any day";
+        }
+        var hit = document.getElementById("trendHit");
+        function fromEvent(e){
+          var rect = wrap.querySelector("svg").getBoundingClientRect();
+          var cx = (e.touches && e.touches[0]) ? e.touches[0].clientX : e.clientX;
+          var px = (cx - rect.left) / rect.width * W;
+          var j = Math.round((px - L) / pw * (data.length - 1));
+          j = Math.max(0, Math.min(data.length - 1, j));
+          showIdx(j);
+        }
+        hit.addEventListener("pointermove", fromEvent);
+        hit.addEventListener("pointerdown", fromEvent);
+        hit.addEventListener("pointerleave", hideCursor);
+        hideCursor();
+      }
+      drawTrend();
+      var chBtns = document.querySelectorAll("[data-ch]"), rgBtns = document.querySelectorAll("[data-rg]");
+      chBtns.forEach(function(b){ b.addEventListener("click", function(){
+        chBtns.forEach(function(x){ x.setAttribute("aria-pressed","false"); });
+        b.setAttribute("aria-pressed","true"); trendCh = +b.getAttribute("data-ch"); drawTrend();
+      });});
+      rgBtns.forEach(function(b){ b.addEventListener("click", function(){
+        rgBtns.forEach(function(x){ x.setAttribute("aria-pressed","false"); });
+        b.setAttribute("aria-pressed","true"); trendRg = +b.getAttribute("data-rg"); drawTrend();
+      });});
+      var rszT; window.addEventListener("resize", function(){ clearTimeout(rszT); rszT = setTimeout(drawTrend, 160); });
+
+      /* ================= monthly bars ================= */
+      (function(){
+        var maxImp = niceCeil(Math.max.apply(null, MONTHLY.map(function(m){ return m[1]; })));
+        var grid = document.getElementById("barsGrid"), gh = "";
+        for (var i = 0; i <= 4; i++){
+          var v = maxImp * i / 4, pct = i * 25;
+          gh += '<div class="gl" style="bottom:' + pct + '%"><span>' + fmtM(v) + '</span></div>';
+        }
+        grid.innerHTML = gh;
+        var row = document.getElementById("barsRow"), labels = document.getElementById("barsLabels"), bh = "", lh = "";
+        MONTHLY.forEach(function(m, idx){
+          var h = (m[1] / maxImp * 100).toFixed(1);
+          var partial = (idx === 0 || idx === MONTHLY.length - 1);
+          bh += '<button type="button" class="bar-btn" data-mi="' + idx + '" aria-label="' + m[0] + '"><span class="bar-fill' + (partial ? " partial" : "") + '" style="height:' + h + '%"></span></button>';
+          var p = m[0].split("-");
+          lh += "<span>" + MON[+p[1]-1] + "</span>";
+        });
+        row.innerHTML = bh; labels.innerHTML = lh;
+        var mc = document.getElementById("monthCursor");
+        function selMonth(idx){
+          row.querySelectorAll(".bar-btn").forEach(function(x){ x.classList.remove("sel"); });
+          row.querySelectorAll(".bar-btn")[idx].classList.add("sel");
+          var m = MONTHLY[idx], p = m[0].split("-");
+          var name = MON[+p[1]-1] + " " + p[0];
+          var extra = idx === MONTHLY.length - 1 ? " · 4 DAYS ONLY — STILL RUNNING" : (idx === 0 ? " · FROM NOV 4" : "");
+          mc.innerHTML = "SELECTED — <b>" + name + "</b> · IMPRESSIONS <b>" + fmt(m[1]) + "</b> · NET FOLLOWS <b>+" + fmt(m[3]) + "</b> · POSTS <b>" + fmt(m[4]) + "</b>" + extra;
+        }
+        row.querySelectorAll(".bar-btn").forEach(function(b){
+          b.addEventListener("click", function(){ selMonth(+b.getAttribute("data-mi")); });
+        });
+        selMonth(2); /* JAN 2026 peak selected by default */
+        mc.innerHTML = "PEAK — <b>JAN 2026</b> · IMPRESSIONS <b>19,067,380</b> · NET FOLLOWS <b>+3,031</b> · POSTS <b>744</b> · tap any bar for its month";
+      })();
+
+      /* ================= engagement mix ================= */
+      (function(){
+        var total = 74489, bar = "", leg = "";
+        MIX.forEach(function(m){
+          var pct = m[1] / total * 100;
+          bar += '<div style="width:' + pct + '%;background:' + m[2] + '"></div>';
+          leg += '<li><span class="sw" style="background:' + m[2] + '"></span>' + m[0] + '<span class="mv">' + fmt(m[1]) + " · " + pct.toFixed(1) + '%</span></li>';
+        });
+        document.getElementById("mixBar").innerHTML = bar;
+        document.getElementById("mixLegend").innerHTML = leg;
+      })();
+
+      /* ================= paper log ================= */
+      (function(){
+        var cols = ["Date","Impressions","Engagements","Likes","Reposts","Replies","Bookmarks","Posts","Net Follows"];
+        var body = document.getElementById("logBody"), html = "";
+        var rows = LOG14.slice().reverse();
+        rows.forEach(function(r){
+          var cls = r[0] === "2026-11-04" ? ' class="today"' : "";
+          html += "<tr" + cls + ">";
+          for (var i = 0; i < r.length; i++){
+            var val = i === 0 ? dstr(r[0]) : (i === 8 && r[i] > 0 ? "+" + fmt(r[i]) : fmt(r[i]));
+            html += '<td data-l="' + cols[i] + '">' + val + "</td>";
+          }
+          html += "</tr>";
+        });
+        body.innerHTML = html;
+        var tot = ["14-DAY TOTAL",0,0,0,0,0,0,0,0];
+        LOG14.forEach(function(r){ for (var i = 1; i < r.length; i++) tot[i] += r[i]; });
+        var fh = "<tr>";
+        for (var j = 0; j < tot.length; j++){
+          fh += '<td data-l="' + cols[j] + '">' + (j === 0 ? tot[0] : (j === 8 ? "+" + fmt(tot[j]) : fmt(tot[j]))) + "</td>";
+        }
+        fh += "</tr>";
+        document.getElementById("logFoot").innerHTML = fh;
+        document.getElementById("csvBtn").addEventListener("click", function(){
+          var csv = "Date,Impressions,Engagements,Likes,Reposts,Replies,Bookmarks,Posts,Net follows\n";
+          LOG14.forEach(function(r){ csv += r.join(",") + "\n"; });
+          var blob = new Blob([csv], { type: "text/csv" });
+          var a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = "p80-log-last-14-days.csv";
+          document.body.appendChild(a); a.click();
+          setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 400);
+        });
+      })();
+
+      /* ================= master view — all units / page by page ================= */
+      var UNITS = [
+        { id:"x-paris", platform:"X / Twitter", name:"@ParisEighty", role:"Main account", followers:"74,000+", status:"RUNNING", lamp:"g", full:true,
+          detail:"Full analytics export pulled Nov 4, 2026. Every detailed panel on this board — readouts (PNL-01), trend (PNL-02), monthly output (PNL-04), engagement mix (PNL-05) and the paper log (PNL-09) — is this unit." },
+        { id:"x-supply", platform:"X / Twitter", name:"@SupplyTheWork", role:"Brand account", followers:"~8,000", status:"RUNNING", lamp:"g", full:false,
+          detail:"Brand account, follower count on file. No separate analytics export pulled yet, so its impressions are not in the @ParisEighty charts." },
+        { id:"x-365", platform:"X / Twitter", name:"@365OTG", role:"Reserved handle", followers:null, status:"RESERVED", lamp:"off", full:false,
+          detail:"Reserved handle, not a main account. No separate readout — it sits inside the combined estimate in PNL-07." },
+        { id:"fb-real", platform:"Facebook", name:"Real Hip Hop", role:"Largest Page", followers:"214,289", status:"RUNNING", lamp:"g", full:false,
+          detail:"Largest of the 14 Pages and the anchor of the counted audience total. The one Page with Content Monetization. Per-Page reach and earnings exports have not been pulled into this board yet." },
+        { id:"fb-hhd-large", platform:"Facebook", name:"Hip Hop Daily (larger)", role:"Archive Page", followers:"~49,664", status:"RESTRICTED", lamp:"r", full:false,
+          detail:"Monetization restricted — flagged for unoriginal / reused content (see the alarm in PNL-08). Follower count on file; the restriction is on the format, not a copyright claim." },
+        { id:"fb-hhd-small", platform:"Facebook", name:"Hip Hop Daily (smaller)", role:"Active Page", followers:null, status:"ACTIVE", lamp:"g", full:false,
+          detail:"Active in the 7-Page question rotation. Individual follower readout not pulled yet." },
+        { id:"fb-facts", platform:"Facebook", name:"Facts No Fiction", role:"Active Page", followers:null, status:"ACTIVE", lamp:"g", full:false,
+          detail:"Active in the 7-Page question rotation. Individual follower readout not pulled yet." },
+        { id:"fb-allfans", platform:"Facebook", name:"All Hip Hop Fans", role:"Active Page", followers:null, status:"ACTIVE", lamp:"g", full:false,
+          detail:"Active in the 7-Page question rotation. Individual follower readout not pulled yet." },
+        { id:"fb-hustle", platform:"Facebook", name:"Hustle Hip Hop", role:"Active Page", followers:null, status:"ACTIVE", lamp:"g", full:false,
+          detail:"Active in the 7-Page question rotation. Individual follower readout not pulled yet." },
+        { id:"fb-hhtv", platform:"Facebook", name:"Hip Hop TV", role:"Active Page · light touch", followers:null, status:"ACTIVE", lamp:"g", full:false,
+          detail:"Active in the rotation, light touch. Individual follower readout not pulled yet." },
+        { id:"fb-brother", platform:"Facebook", name:"Brother OTG Producer", role:"Dormant Page", followers:null, status:"DORMANT", lamp:"off", full:false,
+          detail:"Dormant — not in the posting rotation. No readout pulled." },
+        { id:"fb-beat", platform:"Facebook", name:"Beatbuildertv", role:"Dormant Page", followers:null, status:"DORMANT", lamp:"off", full:false,
+          detail:"Dormant — not in the posting rotation. No readout pulled." },
+        { id:"fb-digital", platform:"Facebook", name:"DigitalTrapping", role:"Dormant Page", followers:null, status:"DORMANT", lamp:"off", full:false,
+          detail:"Dormant — not in the posting rotation. No readout pulled." },
+        { id:"fb-corners", platform:"Facebook", name:"Paris Corners", role:"Dormant Page", followers:null, status:"DORMANT", lamp:"off", full:false,
+          detail:"Dormant — not in the posting rotation. No readout pulled." },
+        { id:"fb-otgphilly", platform:"Facebook", name:"OTG Philly", role:"Dormant Page", followers:null, status:"DORMANT", lamp:"off", full:false,
+          detail:"Dormant — not in the posting rotation. No readout pulled." },
+        { id:"fb-kj", platform:"Facebook", name:"KJ Auto Sales", role:"Dormant Page", followers:null, status:"DORMANT", lamp:"off", full:false,
+          detail:"Dormant — not in the posting rotation. No readout pulled." },
+        { id:"fb-tone", platform:"Facebook", name:"Tone Trump", role:"Dormant Page", followers:null, status:"DORMANT", lamp:"off", full:false,
+          detail:"Dormant — excluded from the posting rotation. No readout pulled." },
+        { id:"yt-paris", platform:"YouTube", name:"@ParisEighty", role:"O.T.G channel", followers:"26,102", status:"RUNNING", lamp:"g", full:false,
+          detail:"Verified Official Artist Channel — 26,102 subscribers, 3.7K videos. Community posting is available. No separate YouTube analytics export pulled into this board yet." },
+        { id:"ig-paris", platform:"Instagram", name:"@pariseighty", role:"Main account", followers:null, status:"NO SIGNAL", lamp:"off", full:false,
+          detail:"Handle on file. Follower readout not pulled yet — NO SIGNAL is not a zero." },
+        { id:"ig-supply", platform:"Instagram", name:"@supplythework", role:"Brand account", followers:null, status:"NO SIGNAL", lamp:"off", full:false,
+          detail:"Handle on file. Follower readout not pulled yet — NO SIGNAL is not a zero." },
+        { id:"tiktok", platform:"TikTok", name:"@365otg", role:"Account", followers:null, status:"NO SIGNAL", lamp:"off", full:false,
+          detail:"Handle on file. Follower readout not pulled yet — it sits inside the combined estimate in PNL-07." },
+        { id:"substack", platform:"Substack", name:"O.T.G News", role:"Newsletter", followers:"~1,500", status:"RUNNING", lamp:"g", full:false,
+          detail:"Newsletter subscriber count on file. No separate readership export pulled yet." }
+      ];
+      var currentUnit = "all";
+      function unitById(id){
+        for (var i = 0; i < UNITS.length; i++) if (UNITS[i].id === id) return UNITS[i];
+        return null;
+      }
+      (function(){
+        var grid = document.getElementById("unitGrid");
+        var sel = document.getElementById("unitSelect");
+        var html = '<button type="button" class="unit-card" data-unit="all">'
+          + '<span class="u-top"><span class="lamp g"></span><span class="u-plat">Whole Brand</span></span>'
+          + '<span class="u-name">All Units Together</span>'
+          + '<span class="u-meta"><span class="u-foll">323,891+ counted</span><span class="u-status">COMBINED</span></span></button>';
+        var opts = "";
+        UNITS.forEach(function(u){
+          html += '<button type="button" class="unit-card" data-unit="' + u.id + '">'
+            + '<span class="u-top"><span class="lamp ' + u.lamp + '"></span><span class="u-plat">' + u.platform + " · " + u.role + '</span></span>'
+            + '<span class="u-name">' + u.name + '</span>'
+            + '<span class="u-meta">' + (u.followers ? '<span class="u-foll">' + u.followers + '</span>' : '<span class="u-foll none">— NO READOUT —</span>')
+            + '<span class="u-status">' + u.status + '</span></span></button>';
+          opts += '<option value="' + u.id + '">' + u.platform.toUpperCase() + " — " + u.name.toUpperCase() + "</option>";
+        });
+        grid.innerHTML = html;
+        sel.insertAdjacentHTML("beforeend", opts);
+
+        var allSummary = document.getElementById("allSummary");
+        var singleDetail = document.getElementById("singleDetail");
+        var noSignal = document.getElementById("noSignalPanel");
+        var viewState = document.getElementById("viewState");
+        var modeAll = document.getElementById("modeAll");
+        var modeSingle = document.getElementById("modeSingle");
+        var xOnly = document.querySelectorAll(".x-only");
+
+        function setView(id){
+          currentUnit = id;
+          var isAll = id === "all";
+          var u = isAll ? null : unitById(id);
+          if (!isAll && !u) { isAll = true; u = null; id = "all"; }
+          sel.value = id;
+          modeAll.setAttribute("aria-pressed", isAll ? "true" : "false");
+          modeSingle.setAttribute("aria-pressed", isAll ? "false" : "true");
+          grid.querySelectorAll(".unit-card").forEach(function(c){
+            c.classList.toggle("sel", c.getAttribute("data-unit") === id);
+          });
+          allSummary.hidden = !isAll;
+          singleDetail.hidden = isAll;
+          if (!isAll){
+            viewState.textContent = "SHOWING: " + u.platform.toUpperCase() + " — " + u.name.toUpperCase() + " · ONE UNIT";
+            singleDetail.innerHTML =
+              '<div class="sd-grid">'
+              + '<div><div class="sd-l">Platform</div><div class="sd-v">' + u.platform + '</div></div>'
+              + '<div><div class="sd-l">Unit</div><div class="sd-v">' + u.name + " · " + u.role + '</div></div>'
+              + '<div><div class="sd-l">Audience On File</div><div class="sd-v mono">' + (u.followers ? u.followers : "— NO READOUT PULLED —") + '</div></div>'
+              + '<div><div class="sd-l">Status</div><div class="sd-v"><span class="status-cell"><span class="lamp ' + u.lamp + '"></span>' + u.status + '</span></div></div>'
+              + '<div><div class="sd-l">Detailed Charts</div><div class="sd-v mono">' + (u.full ? "YES — BELOW" : "NOT PULLED YET") + '</div></div>'
+              + '</div><p class="sd-note">' + u.detail + "</p>";
+          } else {
+            viewState.textContent = "SHOWING: ALL UNITS COMBINED";
+          }
+          var showX = isAll || (u && u.full);
+          xOnly.forEach(function(el){ el.style.display = showX ? "" : "none"; });
+          var showNS = !isAll && u && !u.full;
+          noSignal.hidden = !showNS;
+          if (showNS){
+            document.getElementById("noSignalTitle").textContent = u.name + " — no detailed chart pulled yet";
+            document.getElementById("noSignalBody").textContent = "The @ParisEighty X panels are hidden in this view so one unit never wears another unit's numbers. What is on file for this unit is in its card above and in the brand panels below — the follower bank (PNL-07) and the alarm log (PNL-08). Its own charts land here when its first export is pulled.";
+          }
+        }
+        grid.querySelectorAll(".unit-card").forEach(function(c){
+          c.addEventListener("click", function(){ setView(c.getAttribute("data-unit")); });
+        });
+        sel.addEventListener("change", function(){ setView(sel.value); });
+        modeAll.addEventListener("click", function(){ setView("all"); });
+        modeSingle.addEventListener("click", function(){ setView(currentUnit === "all" ? "x-paris" : currentUnit); });
+        setView("all");
+      })();
+
+      /* ================= alarm ACK ================= */
+      (function(){
+        var chip = document.getElementById("alarmChip"), chipTxt = document.getElementById("alarmChipTxt");
+        function refreshChip(){
+          var active = document.querySelectorAll('#alarmList li[data-sev="alarm"]:not(.acked)').length;
+          if (active === 0){ chip.classList.add("clear"); chipTxt.textContent = "ALARMS: 0 ACTIVE"; }
+          else { chip.classList.remove("clear"); chipTxt.textContent = "ALARMS: " + active + " ACTIVE"; }
+        }
+        document.querySelectorAll("#alarmList .ack-btn").forEach(function(b){
+          b.addEventListener("click", function(){
+            var li = b.closest("li"), acked = li.classList.toggle("acked");
+            b.textContent = acked ? "ACK'D ✓" : "ACK";
+            b.classList.toggle("acked", acked);
+            li.querySelector(".lamp").className = "lamp " + (acked ? "off" : (li.getAttribute("data-sev") === "alarm" ? "r" : li.getAttribute("data-sev") === "warn" ? "a" : "g"));
+            refreshChip();
+          });
+        });
+      })();
+    </script>
+  </body>
+</html>
